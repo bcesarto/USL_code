@@ -33,6 +33,7 @@ bool CheckIfExists(cv::Point pt)
 	path_way_points.push_back(pt);
 	return false;
 }
+
 bool CheckIfExistsRamp(cv::Point pt)
 {
 	cv::Point  radius(0, 5);
@@ -53,10 +54,31 @@ bool CheckIfExistsRamp(cv::Point pt)
 	return false;
 }
 
+void update(int radius, cv::Mat* image, int line_thickness = 2)
+{
+	for(int i = 0; i < rampList.size(); i++)
+	{
+		cv::circle(*image, rampList[i].first, radius, cv::Scalar(0,255,0),CV_FILLED  );
+		cv::circle(*image, rampList[i].second, radius, cv::Scalar(0,255,0),CV_FILLED  );
+	}
+	std::vector<std::vector< cv::Point > > hull(region_list.size());
+	for(int i = 0; i < path_way_points.size(); i++)
+	{
+		cv::circle(*image, path_way_points[i], radius, cv::Scalar(0,0,255) );		
+	}
+	for( int i = 0; i < region_list.size(); i++)
+	{  
+		cv::convexHull( cv::Mat(region_list[i]), hull[i], false ); 
+	}
+	for(int i =0; i < region_list.size(); i++)
+	{
+		cv::drawContours(*image, hull, (int)i, 255, 2);
+	}
+					
+}
 void on_mouseCallback(int event, int x, int y, int flags, void *param)
 {
 	cv::Mat *image = reinterpret_cast<cv::Mat*>(param);
-	//cv::Point  radius(0, 5);
 		int radius = 3;
 		if(event == cv::EVENT_LBUTTONDBLCLK)
 		{
@@ -65,36 +87,17 @@ void on_mouseCallback(int event, int x, int y, int flags, void *param)
 			if( CheckIfExistsRamp( cv::Point(x, y) ) )
 			{
 				orig_img.copyTo(*image);
-				for(int i = 0; i < rampList.size(); i++)
-				{
-					cv::circle(*image, rampList[i].first, radius, cv::Scalar(0,255,0),CV_FILLED  );
-					cv::circle(*image, rampList[i].second, radius, cv::Scalar(0,255,0),CV_FILLED  );
-				}
-				std::vector<std::vector< cv::Point > > hull(region_list.size());
-				for(int i = 0; i < path_way_points.size(); i++)
-				{
-					cv::circle(*image, path_way_points[i], radius, cv::Scalar(0,0,255) );		
-				}
-				for( int i = 0; i < region_list.size(); i++)
-				{  
-					cv::convexHull( cv::Mat(region_list[i]), hull[i], false ); 
-				}
-				for(int i =0; i < region_list.size(); i++)
-				{
-					cv::drawContours(*image, hull, (int)i, 255, 2);
-				}	
+				update(radius, image);
 				click_count=0;
 			}
 			else if(click_count >= 2)
 			{
-				cv::circle(*image, rally_point[1], 3, cv::Scalar(0,255,0), CV_FILLED );
-				cv::circle(*image, rally_point[0], 3, cv::Scalar(0,255,0), CV_FILLED );
+				cv::circle(*image, rally_point[1], radius, cv::Scalar(0,255,0), CV_FILLED );
+				cv::circle(*image, rally_point[0], radius, cv::Scalar(0,255,0), CV_FILLED );
 				
 				rampList.push_back( std::pair< cv::Point, cv::Point>( rally_point[1], rally_point[0] ) );
 				click_count = 0;
 			}
-			//update the image every time it is clicked
-			cv::imshow("Window", *image);
 		}
 		else if(event == cv::EVENT_RBUTTONDBLCLK)
 		{
@@ -102,36 +105,17 @@ void on_mouseCallback(int event, int x, int y, int flags, void *param)
 			if( CheckIfExists( p ) )
 			{
 				orig_img.copyTo(*image);
-				for(int i = 0; i < rampList.size(); i++)
-				{
-					//cv::rectangle(*image, rampList[i].second-radius, rampList[i].first+radius, cv::Scalar(255,0,0));
-					cv::circle(*image, rampList[i].first, 3, cv::Scalar(0,255,0), CV_FILLED  );
-					cv::circle(*image, rampList[i].second, 3, cv::Scalar(0,255,0), CV_FILLED  );
-				}
-				for(int i = 0; i < path_way_points.size(); i++)
-				{
-					cv::circle(*image, path_way_points[i], 3, cv::Scalar(0,0,255), CV_FILLED );		
-				}
-					for( int i = 0; i < region_list.size(); i++ )
-				{  cv::convexHull( cv::Mat(region_list[i]), hull[i], false ); }
-				
-				for(int i =0; i < region_list.size(); i++)
-				{
-					cv::drawContours(*image, hull, (int)i, 255, 2);
-				}
+				update(radius, image);
 			}
 			else
 			{
-				cv::circle(*image, path_way_points.back(), 3, cv::Scalar(0,0,255), CV_FILLED  );
+				cv::circle(*image, path_way_points.back(), radius, cv::Scalar(0,0,255), CV_FILLED  );
 			}
-			//update the image every time it is clicked
-			cv::imshow("Window", *image);			
 		}
 		else if( event ==cv::EVENT_MBUTTONDOWN )
 		{
 			region_corners.push_back(cv::Point(x,y));
-			cv::circle(*image, cv::Point(x,y), 5, cv::Scalar(255,0,0));
-			cv::imshow("Window", *image);
+			cv::circle(*image, cv::Point(x,y), radius, cv::Scalar(255,0,0));
 		}
 		else if( event ==cv::EVENT_MBUTTONDBLCLK )
 		{
@@ -139,50 +123,13 @@ void on_mouseCallback(int event, int x, int y, int flags, void *param)
 			region_corners.clear();
 			orig_img.copyTo(*image);
 			region_label++;
-			std::vector<std::vector< cv::Point > > hull(region_list.size());
-			for( int i = 0; i < region_list.size(); i++ )
-			{  cv::convexHull( cv::Mat(region_list[i]), hull[i], false ); }
+			update(radius, image);
 			
-			for(int i =0; i < region_list.size(); i++)
-			{
-				cv::drawContours(*image, hull, (int)i, 255, 2);
-			}
-			for(int i = 0; i < rampList.size(); i++)
-			{
-				//cv::rectangle(*image, rampList[i].second-radius, rampList[i].first+radius, cv::Scalar(255,0,0));
-				cv::circle(*image, rampList[i].first, 3, cv::Scalar(0,255,0), CV_FILLED  );
-				cv::circle(*image, rampList[i].second, 3, cv::Scalar(0,255,0), CV_FILLED  );
-			}
-			for(int i = 0; i < path_way_points.size(); i++)
-			{
-				cv::circle(*image, path_way_points[i], 3, cv::Scalar(0,0,255), CV_FILLED );		
-			}
-			cv::imshow("Window", *image);
 		}	
+		cv::imshow("Window", *image);
 }
 
-//~ void update(int radius, int line_thickness = 2)
-//~ {
-	//~ for(int i = 0; i < rampList.size(); i++)
-	//~ {
-		//~ cv::circle(*image, rampList[i].first, radius, cv::Scalar(0,255,0),CV_FILLED  );
-		//~ cv::circle(*image, rampList[i].second, radius, cv::Scalar(0,255,0),CV_FILLED  );
-	//~ }
-	//~ std::vector<std::vector< cv::Point > > hull(region_list.size());
-	//~ for(int i = 0; i < path_way_points.size(); i++)
-	//~ {
-		//~ cv::circle(*image, path_way_points[i], radius, cv::Scalar(0,0,255) );		
-	//~ }
-	//~ for( int i = 0; i < region_list.size(); i++)
-	//~ {  
-		//~ cv::convexHull( cv::Mat(region_list[i]), hull[i], false ); 
-	//~ }
-	//~ for(int i =0; i < region_list.size(); i++)
-	//~ {
-		//~ cv::drawContours(*image, hull, (int)i, 255, 2);
-	//~ }
-					
-//~ }
+
 
 double dist(cv::Point p1, cv::Point p2)
 {
@@ -190,6 +137,8 @@ double dist(cv::Point p1, cv::Point p2)
 		   (p1.y-p2.y)*(p1.y-p2.y));
 }
 
+
+//associates ramps to region definitions by distance
 void ramp_to_region()
 {
 	for(int i = 0; i < rampList.size(); i++)
@@ -216,123 +165,73 @@ int main()
 {
 	cv::Mat image, image1;
 	image = cv::imread("Images/Savana_river2.jpg");
-	cv::imshow("window", image);
-	cv:: waitKey(0);
-	
-	
-	std::cout<< "original image: rows: "<< image.rows << ", columns: " << image.cols<< std::endl;
+
 	image1 = cv::imread("Images/savana_river.jpg");
-	
-	
 	int x_ratio = image.cols;
 	int y_ratio = image.rows;
-	
-	
 	cv::resize(image, image, image1.size());
 	image.copyTo(orig_img);
 	x_ratio /= image.cols;
-	y_ratio /= image.rows;
+	y_ratio /= image.rows;	
 	
-	std::cout<< "re-sized to: rows: "<< image.rows << ", columns: " << image.cols<< std::endl;
-	std::cout<< "conversion multiplier: rows: "<< y_ratio << ", columns: " << x_ratio << std::endl;
-	
-	
-	//~ std::ofstream output_file("Outputs/assignment.csv",std::ios::out| std::ios::app);
-	//~ std::ofstream region_def_file("Outputs/region_definintions.csv",std::ios::out| std::ios::app);
+	std::ofstream output_file("Outputs/assignment.csv",std::ios::out| std::ios::app);
+	std::ofstream region_def_file("Outputs/region_definintions.csv",std::ios::out| std::ios::app);
 	 
-	//~ output_file << "vehicle_name, region_id\n";
-	//~ region_def_file << "region_id, region_coordinates, ramp_id, ramp_coordinates\n";
+	output_file << "vehicle_name, region_id\n";
+	region_def_file << "region_id, region_coordinates, ramp_id, ramp_coordinates\n";
 	
-	//~ cv::namedWindow("Window");
-	//~ cv::setMouseCallback("Window", on_mouseCallback, reinterpret_cast<void*>(&image));
-	//~ cv::imshow("Window", image);
+	cv::namedWindow("Window");
+	cv::setMouseCallback("Window", on_mouseCallback, reinterpret_cast<void*>(&image));
+	cv::imshow("Window", image);
 	
-	//~ while((cv::waitKey() & 0xEFFFFF) != 27);
-	
-	
-	//~ cv::imwrite("Outputs/region_assignments.jpg", image);
-	//~ cv::destroyWindow("Window");
-	
-	//~ ramp_to_region();
-	
-	//~ std::vector<std::string> vehicle_ids;
-	//~ vehicle_ids.push_back("anubis");
-	//~ vehicle_ids.push_back("bogey");
-	//~ vehicle_ids.push_back("anubis");
-	//~ vehicle_ids.push_back("anubis");
-	
-	//~ std::vector<std::vector< cv::Point > > hull_list(region_list.size());
-	//~ for( int i = 0; i < region_list.size(); i++ )
-	//~ {  cv::convexHull( cv::Mat(region_list[i]), hull_list[i], false ); }
+	while((cv::waitKey() & 0xEFFFFF) != 27);
 	
 	
-	//~ for (int R = 0; R < region_ramp.size(); R++)
-	//~ {
-		//~ int region_id = region_ramp[R].first;
-		//~ int ramp_id   = region_ramp[R].second;
-		//~ //assignment of vehicle, region, ramp
-		//~ output_file <<vehicle_ids[R]<< ", "<<region_id <<'\n';
-		//~ region_def_file <<region_id <<", [";
-		//~ for(int j = 0; j < hull_list[region_id].size(); j++)
-		//~ {
-			//~ if(j == hull_list[region_id].size()-1)
-			//~ {
-				//~ region_def_file<<y_ratio*hull_list[region_id][j].y << ", " << x_ratio*hull_list[region_id][j].x <<"], ";
-			//~ }
-			//~ else
-			//~ {
-				//~ region_def_file << y_ratio*hull_list[region_id][j].y << ", " << x_ratio*hull_list[region_id][j].x <<", " ;
-			//~ }
-		//~ }
-		//~ if(ramp_id >=0)
-		//~ {
-			//~ region_def_file << ramp_id <<", ";
-			//~ region_def_file <<"["<< y_ratio*rampList[ramp_id].first.y << ", " << x_ratio*rampList[ramp_id].first.x <<", "
-							//~ << y_ratio*rampList[ramp_id].second.y << ", " << x_ratio*rampList[ramp_id].second.x <<"]\n";
-		//~ }
-	//~ }
+	cv::imwrite("Outputs/region_assignments.jpg", image);
+	cv::destroyWindow("Window");
 	
-	//~ for(int i =0; i < rampList.size(); i++)
-	//~ {
-		//~ ramp_def_file << i <<",";
-		//~ ramp_def_file <<"["<< y_ratio*rampList[i].first.y << "," << x_ratio*rampList[i].first.x <<", "<< y_ratio*rampList[i].second.y << "," << x_ratio*rampList[i].second.x <<"] \n";	
-	//~ }
+	ramp_to_region();
 	
-	//for(int i =0; i < region_list.size(); i++)
-	//{
-		//~ int i = 3;
-		//~ output_file <<"anubis, "<< 3 << ", [ ";
-		//~ for(int j = 0; j < region_list[i].size(); j++)
-		//~ {
-			//~ if(j >= region_list[i].size()-1)
-			//~ {
-				//~ output_file<< y_ratio*region_list[i][j].y  << "," << x_ratio*region_list[i][j].x <<" ], ";
-			//~ }
-			//~ else
-			//~ {
-				//~ output_file << y_ratio*region_list[i][j].y << "," << x_ratio*region_list[i][j].x <<" " ;
-			//~ }
-		//~ }
-	//}
+	std::vector<std::string> vehicle_ids;
+	vehicle_ids.push_back("anubis");
+	vehicle_ids.push_back("bogey");
+	vehicle_ids.push_back("anubis");
+	vehicle_ids.push_back("anubis");
 	
-	//~ for(int i =0; i < rampList.size(); i++)
-	//~ {
-		//~ output_file <<"ramp, "<< i << " [ "<< rampList[i].first.x << ", " << rampList[i].first.y <<", "<< rampList[i].second.x << ", " << rampList[i].second.y <<" ] \n";
-	//~ }
+	//takes region points and orders them into a convex hull
+	//puts convex hull point in hull list
+	std::vector<std::vector< cv::Point > > hull_list(region_list.size());
+	for( int i = 0; i < region_list.size(); i++ )
+	{  
+		cv::convexHull( cv::Mat(region_list[i]), hull_list[i], false ); 
+	}
 	
-	//~ output_file <<"Way_Points,5, [ ";
-	//~ for(int i =0; i < path_way_points.size(); i++)
-	//~ {
-		//~ if(i >= path_way_points.size()-1)
-		//~ {
-			//~ output_file << y_ratio*path_way_points[i].y << " " << x_ratio*path_way_points[i].x<< " ]\n";
-		//~ }
-		//~ else
-		//~ {
-			//~ output_file << y_ratio*path_way_points[i].y << " " << x_ratio*path_way_points[i].x<< " ";
-		//~ }
-	//~ }
-	//~ // create a window
-	//~ // register clicks on the image
+	
+	for (int R = 0; R < region_ramp.size(); R++)
+	{
+		int region_id = region_ramp[R].first;
+		int ramp_id   = region_ramp[R].second;
+		//assignment of vehicle, region, ramp
+		output_file <<vehicle_ids[R]<< ", "<<region_id <<'\n';
+		region_def_file <<region_id <<", [";
+		for(int j = 0; j < hull_list[region_id].size(); j++)
+		{
+			if(j == hull_list[region_id].size()-1)
+			{
+				region_def_file<<y_ratio*hull_list[region_id][j].y << ", " << x_ratio*hull_list[region_id][j].x <<"], ";
+			}
+			else
+			{
+				region_def_file << y_ratio*hull_list[region_id][j].y << ", " << x_ratio*hull_list[region_id][j].x <<", " ;
+			}
+		}
+		if(ramp_id >=0)
+		{
+			region_def_file << ramp_id <<", ";
+			region_def_file <<"["<< y_ratio*rampList[ramp_id].first.y << ", " << x_ratio*rampList[ramp_id].first.x <<", "
+							<< y_ratio*rampList[ramp_id].second.y << ", " << x_ratio*rampList[ramp_id].second.x <<"]\n";
+		}
+	}
+	
 	return 0;
 }
